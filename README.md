@@ -28,7 +28,7 @@ AskMe is a web-based forum application where users can post questions, answer ot
 ## Deployment
 Frontend can be deployed to GitHub Pages or Netlify. Backend can be deployed to Render or hosted locally.
 
-## Microservices demo for class (Forum 5000 + Users 5001)
+## Microservices demo for class (Forum 5000 + Users 5001) 
 
 ## Authors
 - Jasemina Bekteshi

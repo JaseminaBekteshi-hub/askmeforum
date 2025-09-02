@@ -1,0 +1,77 @@
+:root{
+  --bg:#f7f8fc;
+  --card:#ffffff;
+  --text:#1f2937;
+  --muted:#6b7280;
+  --primary:#2a5bd7;
+  --border:#e5e7eb;
+  --shadow:0 6px 18px rgba(0,0,0,.06);
+}
+
+*{ box-sizing:border-box }
+
+html, body { height: 100%; }
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,Helvetica,sans-serif;
+}
+
+/* Cards & common UI */
+.header{ text-align:center; margin-bottom: 28px; }
+.header h1{ font-size: 40px; margin: 0 0 10px; }
+.tagline{ margin:0 auto; max-width: 700px; color: var(--muted); line-height: 1.5; }
+
+.card{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+}
+.card h2{ margin-top: 0; }
+
+.label{ display:block; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+.input, .select, .textarea{
+  width: 100%;
+  padding: 10px 12px;
+  border:1px solid var(--border);
+  border-radius: 10px;
+}
+.textarea{ min-height: 96px; resize: vertical; }
+
+.btn{
+  appearance:none; border:none; background:var(--primary); color:#fff;
+  padding:10px 14px; border-radius:10px; cursor:pointer; transition: background .2s;
+}
+.btn:hover{ background:#1d46a9; }
+.btn:disabled{ opacity:.6; cursor:not-allowed; }
+
+.small{ color:var(--muted); font-size:13px; }
+.divider{ height:1px; border:0; background:var(--border); margin:24px 0; }
+
+.section-title{ font-size:22px; margin:10px 0 14px; }
+
+/* Question list */
+.q-item{
+  padding:14px; border:1px solid var(--border); border-radius:12px; background:#fff;
+  box-shadow:var(--shadow); transition: transform .15s, box-shadow .15s;
+}
+.q-item:hover{ transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,.08); }
+.q-item h3{ margin:0 0 6px; }
+.q-meta{ font-size:13px; color:var(--muted); }
+.q-open{ margin-top:10px; }
+
+.answer{
+  padding:10px 12px; border:1px solid var(--border); border-radius:10px;
+  margin-bottom:10px; background:#fafafa;
+}
+
+/* Footer */
+.footer{
+  text-align:center; color:var(--muted); font-size:14px;
+  margin-top:40px; padding:20px 0; border-top:1px solid var(--border);
+}

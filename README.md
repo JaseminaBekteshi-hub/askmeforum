@@ -1,35 +1,31 @@
-# AskMe – A Simple Forum Web App
+# AskMe Forum
 
-## Project Description
-AskMe is a web-based forum application where users can post questions, answer others, and browse topics by category and tag.
+A simple forum web application built for the **Advanced Topics on Web Engineering** course at UBT.  
+The project demonstrates microservices architecture using JavaScript (React + Node.js).
 
-## Technologies Used
-- Frontend: React, HTML5, CSS3, JavaScript, jQuery, AJAX
-- Backend: Node.js, Express (Microservices architecture)
+---
 
-## Features
-- User registration
-- Post questions with tags and categories
-- View and search questions
-- Add answers
-- Track view counts
+## 🚀 Features
+- User registration (name + email) with **persistent storage in `users.json`**
+- Login / Logout system for forum users
+- Only registered users can post new questions
+- Visitors can post answers (name required, email optional)
+- Questions include **tags, categories, and view counters**
+- Two microservices:
+  - **Forum Service (port 5000)** → manages questions, answers, views
+  - **Users Service (port 5001)** → manages registration, login, and persistence
+- Hosted on **GitHub** for version control and collaboration
 
-## Setup
-### Frontend
-1. Navigate to `frontend/`
-2. Run `npm install`
-3. Start the development server with `npm start`
+---
 
-### Backend
-1. Navigate to `backend/`
-2. Run `npm install`
-3. Start the API server with `node index.js`
+## 🛠️ Tech Stack
+- **Frontend:** React, Vite, JavaScript
+- **Backend:** Node.js + Express
+- **Architecture style:** Microservices
+- **Persistence:** JSON file (`users.json`) for registered users
+- **Version Control:** GitHub
+- **Development Tool:** Visual Studio Code
 
-## Deployment
-Frontend can be deployed to GitHub Pages or Netlify. Backend can be deployed to Render or hosted locally.
+---
 
-## Microservices demo for class (Forum 5000 + Users 5001) 
-
-## Authors
-- Jasemina Bekteshi
-- Ernesa Celina
+## 📂 Project Structure

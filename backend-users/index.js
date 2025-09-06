@@ -1,84 +1,72 @@
-// ===============================
-// USERS MICROSERVICE (port 5001)
-// Tech: Node.js + Express
-// Purpose: simple registration (name + email), kept in memory
-// ===============================
+// backend-users/index.js
+// Users microservice (port 5001)
+// - Registers forum users (name + email)
+// - Persists users to users.json
+// - Login by email (simple lookup; no password for class demo)
+// - GET /api/users to let Forum service validate authors
 
-const express = require('express');  // small web server
-const cors = require('cors');        // allow calls from frontend (5173) and other services
+const express = require('express');
+const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
-const PORT = 5001;
-
-// Middlewares: allow JSON + cross-origin
 app.use(cors());
 app.use(express.json());
 
-// ===============================
-// DATA (in memory only)
-// When server restarts -> data resets (OK for assignment)
-// ===============================
+const USERS_FILE = path.join(__dirname, 'users.json');
 
-// USERS ARRAY
-// Each user: { id, name, email, createdAt }
-let users = [
-  // example:
-  // { id: 1, name: "Alice", email: "alice@example.com", createdAt: "2025-08-31T12:00:00Z" }
-];
+function loadUsers() {
+  try {
+    const raw = fs.readFileSync(USERS_FILE, 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+function saveUsers(list) {
+  fs.writeFileSync(USERS_FILE, JSON.stringify(list, null, 2));
+}
 
-// ===============================
-// ROUTES
-// ===============================
+let users = loadUsers();
 
-// Quick check
-// GET http://localhost:5001/
-app.get('/', (req, res) => {
-  res.send('Users service is running');
-});
+// Health
+app.get('/', (_req, res) => res.send('Users service is running (5001)'));
 
-// List all users (for demo)
-// GET http://localhost:5001/api/users
-app.get('/api/users', (req, res) => {
-  res.json(users);
-});
-
-// Register a new user (simple)
-// POST http://localhost:5001/api/users/register
-// Body example: { "name":"Jasemina", "email":"jasemina@example.com" }
+// Register
 app.post('/api/users/register', (req, res) => {
-  const { name, email } = req.body;
+  const { name, email } = req.body || {};
+  if (!name || !email) return res.status(400).json({ error: 'Name and email are required.' });
 
-  // very simple validation
-  if (!name || !email) {
-    return res.status(400).json({ error: 'Please fill name and email.' });
-  }
-
-  // super simple email format check (not perfect, just enough)
-  const looksLikeEmail = /\S+@\S+\.\S+/.test(email);
-  if (!looksLikeEmail) {
-    return res.status(400).json({ error: 'Please enter a valid email (e.g. user@example.com).' });
-  }
-
-  // (optional) avoid duplicate email
-  const emailExists = users.some(u => u.email.toLowerCase() === email.toLowerCase());
-  if (emailExists) {
-    return res.status(409).json({ error: 'This email is already registered.' });
-  }
+  const exists = users.some(u => String(u.email).toLowerCase() === String(email).toLowerCase());
+  if (exists) return res.status(400).json({ error: 'A user with this email already exists.' });
 
   const newUser = {
     id: users.length ? Math.max(...users.map(u => u.id)) + 1 : 1,
-    name,
-    email,
-    createdAt: new Date().toISOString()
+    name: String(name).trim(),
+    email: String(email).trim(),
+    createdAt: new Date().toISOString(),
   };
-
   users.push(newUser);
-  return res.status(201).json(newUser);
+  saveUsers(users);
+  res.json(newUser);
 });
 
-// ===============================
-// START SERVER
-// ===============================
+// Simple login (by email)
+app.post('/api/users/login', (req, res) => {
+  const { email } = req.body || {};
+  if (!email) return res.status(400).json({ error: 'Email is required.' });
+
+  const user = users.find(u => String(u.email).toLowerCase() === String(email).toLowerCase());
+  if (!user) return res.status(404).json({ error: 'No user found with this email. Please register.' });
+
+  res.json({ id: user.id, name: user.name, email: user.email });
+});
+
+// List users (for forum service validation)
+app.get('/api/users', (_req, res) => res.json(users));
+
+const PORT = 5001;
 app.listen(PORT, () => {
-  console.log(`Users service running on http://localhost:${PORT}`);
+  console.log(`Users service listening on http://localhost:${PORT}`);
 });

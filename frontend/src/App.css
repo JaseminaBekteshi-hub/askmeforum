@@ -50,7 +50,7 @@ body{
 .btn:hover{ background:#1d46a9; }
 .btn:disabled{ opacity:.6; cursor:not-allowed; }
 
-.small{ color:var(--muted); font-size:13px; }
+.small{ color:var(--muted); font-size:11px; }
 .divider{ height:1px; border:0; background:var(--border); margin:24px 0; }
 
 .section-title{ font-size:22px; margin:10px 0 14px; }

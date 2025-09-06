@@ -1,117 +1,192 @@
-// =====================================
-// AskMe Frontend (hard-centered version)
-// =====================================
+// frontend/src/App.jsx
+// AskMe – Forum (Frontend)
+// - Register OR Login (saved in localStorage)
+// - Only logged-in (registered) users can add questions
+// - Visitors can add answers (name required, email optional)
 
 import { useEffect, useState } from 'react';
 import './App.css';
+
+const FORUM_API = 'http://localhost:5000';
+const USERS_API = 'http://localhost:5001';
 
 const categoriesForForm = ['Technology', 'Web Development', 'Business', 'General'];
 const categoriesForFilter = ['All', ...categoriesForForm];
 
 function App() {
-  // ----- state -----
   const [questions, setQuestions] = useState([]);
   const [selected, setSelected] = useState(null);
   const [answers, setAnswers] = useState([]);
+
+  // auth
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // forms
+  const [registerForm, setRegisterForm] = useState({ name: '', email: '' });
+  const [loginForm, setLoginForm] = useState({ email: '' });
+  const [authMsg, setAuthMsg] = useState('');
 
   const [questionForm, setQuestionForm] = useState({
     title: '',
     description: '',
     category: 'Technology',
     tags: '',
-    author: ''
+    author: '', // filled from currentUser
   });
+  const [questionMsg, setQuestionMsg] = useState('');
+
   const [answerForm, setAnswerForm] = useState({ author: '', email: '', text: '' });
 
-  const [userForm, setUserForm] = useState({ name: '', email: '' });
-  const [userMsg, setUserMsg] = useState('');
-  const [message, setMessage] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
 
-  // ----- load questions -----
-  const loadQuestions = () => {
-    fetch('http://localhost:5000/api/questions')
-      .then(res => res.json())
-      .then(data => setQuestions(data))
-      .catch(console.error);
+  useEffect(() => {
+    // load saved user
+    const saved = localStorage.getItem('askme_user');
+    if (saved) {
+      const u = JSON.parse(saved);
+      setCurrentUser(u);
+      setRegisterForm({ name: u.name, email: u.email });
+      setQuestionForm(p => ({ ...p, author: u.name }));
+    }
+    loadQuestions();
+    // eslint-disable-next-line
+  }, []);
+
+  const loadQuestions = async () => {
+    try {
+      const res = await fetch(`${FORUM_API}/api/questions`);
+      const data = await res.json();
+      setQuestions(Array.isArray(data) ? data : []);
+    } catch {}
   };
-  useEffect(() => { loadQuestions(); }, []);
 
-  // ----- handlers -----
-  const handleQuestionChange = (e) =>
-    setQuestionForm(p => ({ ...p, [e.target.name]: e.target.value }));
-  const handleAnswerChange = (e) =>
-    setAnswerForm(p => ({ ...p, [e.target.name]: e.target.value }));
-  const handleUserChange = (e) =>
-    setUserForm(p => ({ ...p, [e.target.name]: e.target.value }));
+  const loadAnswers = async (qid) => {
+    try {
+      const res = await fetch(`${FORUM_API}/api/questions/${qid}/answers`);
+      const data = await res.json();
+      setAnswers(Array.isArray(data) ? data : []);
+    } catch {}
+  };
 
-  // ====== USERS (5001) ======
+  // --- auth handlers ---
+  const handleRegisterChange = (e) =>
+    setRegisterForm(p => ({ ...p, [e.target.name]: e.target.value }));
+  const handleLoginChange = (e) =>
+    setLoginForm(p => ({ ...p, [e.target.name]: e.target.value }));
+
   const registerUser = async (e) => {
     e.preventDefault();
-    setUserMsg('');
+    setAuthMsg('');
     try {
-      const res = await fetch('http://localhost:5001/api/users/register', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userForm)
+      const res = await fetch(`${USERS_API}/api/users/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(registerForm),
       });
       const data = await res.json();
-      if (!res.ok) return setUserMsg(data.error || 'Registration failed');
-      setUserMsg(`Registered: ${data.name} (${data.email}) ✅`);
-      setUserForm({ name: '', email: '' });
+      if (!res.ok) return setAuthMsg(data?.error || 'Registration failed');
+      localStorage.setItem('askme_user', JSON.stringify({ name: data.name, email: data.email }));
+      setCurrentUser({ name: data.name, email: data.email });
+      setQuestionForm(p => ({ ...p, author: data.name }));
+      setAuthMsg(`Registered: ${data.name} (${data.email}) ✅`);
     } catch {
-      setUserMsg('Could not reach Users service (5001).');
+      setAuthMsg('Could not reach Users service (5001).');
     }
   };
 
-  // ====== FORUM (5000) ======
-  const submitQuestion = async (e) => {
+  const loginUser = async (e) => {
     e.preventDefault();
-    setMessage('');
+    setAuthMsg('');
     try {
-      const res = await fetch('http://localhost:5000/api/questions', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(questionForm)
+      const res = await fetch(`${USERS_API}/api/users/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(loginForm),
       });
       const data = await res.json();
-      if (!res.ok) return setMessage(data.error || 'Failed to create question');
-      setMessage('Question posted! ✅');
-      setQuestionForm({ title: '', description: '', category: 'Technology', tags: '', author: '' });
-      loadQuestions();
+      if (!res.ok) return setAuthMsg(data?.error || 'Login failed');
+      localStorage.setItem('askme_user', JSON.stringify({ name: data.name, email: data.email }));
+      setCurrentUser({ name: data.name, email: data.email });
+      setQuestionForm(p => ({ ...p, author: data.name }));
+      setAuthMsg(`Logged in as: ${data.name} ✅`);
     } catch {
-      setMessage('Could not reach Forum service (5000).');
+      setAuthMsg('Could not reach Users service (5001).');
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('askme_user');
+    setCurrentUser(null);
+    setRegisterForm({ name: '', email: '' });
+    setLoginForm({ email: '' });
+    setQuestionForm(p => ({ ...p, author: '' }));
+    setAuthMsg('Logged out.');
+  };
+
+  // --- forum handlers ---
+  const handleQuestionChange = (e) =>
+    setQuestionForm(p => ({ ...p, [e.target.name]: e.target.value }));
+
+  const handleAnswerChange = (e) =>
+    setAnswerForm(p => ({ ...p, [e.target.name]: e.target.value }));
+
+  const submitQuestion = async (e) => {
+    e.preventDefault();
+    setQuestionMsg('');
+    if (!currentUser) {
+      setQuestionMsg('Please login or register first to add a question.');
+      return;
+    }
+    try {
+      const res = await fetch(`${FORUM_API}/api/questions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...questionForm,
+          author: currentUser.name, // enforce current user
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) return setQuestionMsg(data?.error || 'Failed to create question');
+
+      setQuestionMsg('Question posted! ✅');
+      setQuestionForm({
+        title: '',
+        description: '',
+        category: 'Technology',
+        tags: '',
+        author: currentUser.name,
+      });
+      await loadQuestions();
+    } catch {
+      setQuestionMsg('Could not reach Forum service (5000).');
     }
   };
 
   const openQuestion = async (id) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/questions/${id}`);
-      if (!res.ok) return setSelected(null);
-      const data = await res.json();
-      setSelected(data);
-      loadQuestions();
-      loadAnswers(id);
+      const res = await fetch(`${FORUM_API}/api/questions/${id}`);
+      if (!res.ok) return;
+      const q = await res.json();
+      setSelected(q);
+      await loadQuestions();
+      await loadAnswers(id);
       setAnswerForm({ author: '', email: '', text: '' });
     } catch {}
-  };
-
-  const loadAnswers = (qid) => {
-    fetch(`http://localhost:5000/api/questions/${qid}/answers`)
-      .then(res => res.json())
-      .then(setAnswers)
-      .catch(console.error);
   };
 
   const submitAnswer = async (e) => {
     e.preventDefault();
     if (!selected) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/questions/${selected.id}/answers`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(answerForm)
+      const res = await fetch(`${FORUM_API}/api/questions/${selected.id}/answers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(answerForm),
       });
       const data = await res.json();
-      if (!res.ok) return alert(data.error || 'Failed to add answer');
-      loadAnswers(selected.id);
+      if (!res.ok) return alert(data?.error || 'Failed to add answer');
+      await loadAnswers(selected.id);
       setAnswerForm({ author: '', email: '', text: '' });
     } catch {
       alert('Could not reach Forum service (5000).');
@@ -123,39 +198,70 @@ function App() {
   const filteredQuestions =
     categoryFilter === 'All' ? questions : questions.filter(q => q.category === categoryFilter);
 
-  // ----- UI -----
   return (
-    /* HARD CENTER: full-width flex that centers the inner column */
     <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-      {/* Fixed-width inner column; maxWidth keeps it responsive */}
-      <div style={{ width: '720px', maxWidth: '90vw', margin: '40px 0' }}>
+      <div className="container">
+        {/* Header */}
         <header className="header">
           <h1>AskMe – Forum</h1>
           <p className="tagline">
-            This is a forum for technical questions. Everyone can post a new question and
-            also answer questions that are already posted.
+            A collaborative space for technical discussions.<br />
+           Registered users can post questions, and visitors are welcome to share their answers.
           </p>
         </header>
 
-        {/* Register */}
-        <section className="card">
-          <h2 className="section-title">Please register here</h2>
-          <form onSubmit={registerUser}>
-            <label className="label">Your name</label>
-            <input className="input" name="name" value={userForm.name} onChange={handleUserChange} />
-
-            <div style={{ height: 10 }} />
-            <label className="label">Your email</label>
-            <input className="input" name="email" value={userForm.email} onChange={handleUserChange} />
-
-            <div style={{ height: 12 }} />
-            <button type="submit" className="btn">Register</button>
-          </form>
-          {userMsg && <p className="small" style={{ marginTop: 10 }}>{userMsg}</p>}
+        {/* Auth status */}
+        <section className="card" style={{ marginBottom: 20 }}>
+          {currentUser ? (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                Logged in as <strong>{currentUser.name}</strong> ({currentUser.email})
+              </div>
+              <button className="btn" onClick={logout}>Logout</button>
+            </div>
+          ) : (
+            <div className="small">You are not logged in. Please log in, or register if this is your first time.</div>
+          )}
         </section>
 
+        {/* Auth forms */}
+        {!currentUser && (
+          <section className="card">
+            <div style={{ display: 'grid', gap: 20 }}>
+              {/* Register */}
+              <div>
+                <h2 className="section-title">Register</h2>
+                <form onSubmit={registerUser}>
+                  <label className="label">Your name</label>
+                  <input className="input" name="name" value={registerForm.name} onChange={handleRegisterChange} />
+                  <div style={{ height: 10 }} />
+                  <label className="label">Your email</label>
+                  <input className="input" name="email" value={registerForm.email} onChange={handleRegisterChange} />
+                  <div style={{ height: 12 }} />
+                  <button type="submit" className="btn">Register</button>
+                </form>
+              </div>
+
+              <hr className="divider" />
+
+              {/* Login */}
+              <div>
+                <h2 className="section-title">Login</h2>
+                <form onSubmit={loginUser}>
+                  <label className="label">Email</label>
+                  <input className="input" name="email" value={loginForm.email} onChange={handleLoginChange} />
+                  <div style={{ height: 12 }} />
+                  <button type="submit" className="btn">Login</button>
+                </form>
+              </div>
+            </div>
+
+            {authMsg && <p className="small" style={{ marginTop: 10 }}>{authMsg}</p>}
+          </section>
+        )}
+
+        {/* Details view */}
         {selected ? (
-          /* DETAILS */
           <section className="card">
             <button onClick={backToList} className="btn" style={{ marginBottom: 12 }}>← Back</button>
             <h2 style={{ margin: '6px 0 8px' }}>{selected.title}</h2>
@@ -166,7 +272,6 @@ function App() {
             </p>
 
             <hr className="divider" />
-
             <h3 className="section-title" style={{ marginTop: 0 }}>Answers</h3>
             {answers.length === 0 ? (
               <p className="small">No answers yet. Be the first to answer!</p>
@@ -180,20 +285,16 @@ function App() {
             )}
 
             <hr className="divider" />
-
             <h3 className="section-title">Add your answer</h3>
             <form onSubmit={submitAnswer}>
               <label className="label">Your name</label>
               <input className="input" name="author" value={answerForm.author} onChange={handleAnswerChange} />
-
               <div style={{ height: 10 }} />
               <label className="label">Your email (optional)</label>
               <input className="input" name="email" value={answerForm.email} onChange={handleAnswerChange} />
-
               <div style={{ height: 10 }} />
               <label className="label">Your answer</label>
               <textarea className="textarea" name="text" value={answerForm.text} onChange={handleAnswerChange} />
-
               <div style={{ height: 12 }} />
               <button type="submit" className="btn">Post Answer</button>
             </form>
@@ -204,39 +305,32 @@ function App() {
             <section className="card">
               <h2 className="section-title">Ask a Question</h2>
               <p className="small" style={{ marginTop: -6 }}>
-                Provide a clear title and description. Choose a category and add tags like <em>react</em>, <em>javascript</em>.
+                Only <strong>logged-in (registered)</strong> users can post questions. Visitors can answer any question.
               </p>
-
               <form onSubmit={submitQuestion}>
                 <label className="label">Title</label>
                 <input className="input" name="title" value={questionForm.title} onChange={handleQuestionChange} />
-
                 <div style={{ height: 10 }} />
                 <label className="label">Description</label>
                 <textarea className="textarea" name="description" value={questionForm.description} onChange={handleQuestionChange} />
-
                 <div style={{ height: 10 }} />
                 <label className="label">Category</label>
                 <select className="select" name="category" value={questionForm.category} onChange={handleQuestionChange}>
                   {categoriesForForm.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
-
                 <div style={{ height: 10 }} />
                 <label className="label">Tags (comma separated)</label>
                 <input className="input" name="tags" value={questionForm.tags} onChange={handleQuestionChange} placeholder="react, javascript" />
-
                 <div style={{ height: 10 }} />
-                <label className="label">Your name</label>
-                <input className="input" name="author" value={questionForm.author} onChange={handleQuestionChange} />
-
+                <label className="label">Author</label>
+                <input className="input" name="author" value={questionForm.author} onChange={handleQuestionChange} readOnly placeholder="Login to fill" />
                 <div style={{ height: 12 }} />
-                <button type="submit" className="btn">Post Question</button>
+                <button type="submit" className="btn" disabled={!currentUser}>Post Question</button>
               </form>
-
-              {message && <p className="small" style={{ marginTop: 12 }}>{message}</p>}
+              {questionMsg && <p className="small" style={{ marginTop: 12 }}>{questionMsg}</p>}
             </section>
 
-            {/* Filter */}
+            {/* Questions list */}
             <section className="card" style={{ paddingBottom: 10 }}>
               <h2 className="section-title" style={{ marginBottom: 6 }}>All Questions</h2>
               <label className="label">Filter by category</label>
@@ -245,7 +339,6 @@ function App() {
               </select>
             </section>
 
-            {/* Questions list */}
             <section>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                 {filteredQuestions.map(q => (

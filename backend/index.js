@@ -1,31 +1,16 @@
-// =======================
-// BACKEND: AskMe API
-// Tech: Node.js + Express
-// Purpose: Provide routes (URLs) for the frontend
-// =======================
 
-// 1) Load libraries we use
-const express = require('express');  // Express = small web server
-const cors = require('cors');        // CORS = allows frontend (5173) to call backend (5000)
+const express = require('express');  // small web server
+const cors = require('cors');        // CORS = allows frontend (5173) to call backend (4000)
 
-// 2) Create the app and set the port
+//  Create the app and set the port
 const app = express();
-const PORT = 5000;
-
-// 3) Middlewares (helpers that run before routes)
-//    - cors(): allow cross-origin requests (frontend → backend)
-//    - express.json(): read JSON body from requests
+const PORT = 4000;
+//helpers
 app.use(cors());
 app.use(express.json());
 
-// =======================
-// 4) DATA (in memory, no database)
-//    These arrays live only while the server is running.
-//    They reset when the server restarts. This is OK for your assignment.
-// =======================
+//static questions i have created
 
-// QUESTIONS ARRAY (start with two examples)
-// Each question has: id, title, description, category, tags[], author, views, createdAt
 let questions = [
   {
     id: 1,
@@ -49,34 +34,16 @@ let questions = [
   }
 ];
 
-// ANSWERS ARRAY (empty to start)
-// Each answer belongs to a question, linked by questionId
-// Each answer has: id, questionId, author, email(optional), text, createdAt
-let answers = [
-  // Example shape:
-  // { id: 1, questionId: 1, author: "Eve", email: "eve@example.com", text: "Install from nodejs.org", createdAt: "2025-08-31T12:00:00Z" }
-];
+let answers = [];
 
-// =======================
-// 5) ROUTES (URLs the frontend will call)
-// =======================
 
-// ROOT route (quick check route)
-// Visit http://localhost:5000/ to see this text
-app.get('/', (req, res) => {
-  res.send('Welcome to AskMe API');
-});
+// Checks if server is alive
+app.get('/', (req, res) => {  res.send('The server for questions and answers is running');});
 
 // Get ALL questions
-// Purpose: Frontend shows a list of all questions
-// URL: GET /api/questions
-app.get('/api/questions', (req, res) => {
-  res.json(questions);
-});
+app.get('/api/questions', (req, res) => {  res.json(questions);});
 
 // Get ONE question by id AND increase its views by 1
-// Purpose: When user opens a question, count the visit
-// URL: GET /api/questions/:id   e.g., /api/questions/2
 app.get('/api/questions/:id', (req, res) => {
   const id = Number(req.params.id);
   const q = questions.find(q => q.id === id);
@@ -85,24 +52,19 @@ app.get('/api/questions/:id', (req, res) => {
     return res.status(404).json({ error: 'Question not found' });
   }
 
-  q.views += 1; // increase visit counter
+  q.views += 1; 
   res.json(q);
 });
 
-// Create (POST) a NEW question
-// Purpose: Form in the frontend sends a new question here
-// URL: POST /api/questions
-// Body example:
-// { "title":"...", "description":"...", "category":"Technology", "tags":"react, javascript", "author":"Jasemina" }
+// Create a NEW question
 app.post('/api/questions', (req, res) => {
   let { title, description, category, tags, author } = req.body;
 
-  // Very simple validation
+  
   if (!title || !description || !category || !author) {
     return res.status(400).json({ error: 'Please fill: title, description, category, author.' });
   }
 
-  // Convert tags: "react, javascript"  ->  ["react", "javascript"]
   if (typeof tags === 'string') {
     tags = tags.split(',').map(t => t.trim()).filter(Boolean);
   }
@@ -119,35 +81,25 @@ app.post('/api/questions', (req, res) => {
     createdAt: new Date().toISOString()
   };
 
-  questions.push(newQuestion); // save in memory
+  questions.push(newQuestion);
   res.status(201).json(newQuestion);
 });
 
 // Get ALL answers for ONE question
-// Purpose: Show answers under the question details
-// URL: GET /api/questions/:id/answers
 app.get('/api/questions/:id/answers', (req, res) => {
   const qid = Number(req.params.id);
   const list = answers.filter(a => a.questionId === qid);
   res.json(list);
 });
 
-// Create (POST) a NEW answer for ONE question
-// Purpose: Form in the frontend sends a new answer here
-// URL: POST /api/questions/:id/answers
-// Body example:
-// { "author":"Ernesa", "email":"", "text":"Here is how you do it..." }
 app.post('/api/questions/:id/answers', (req, res) => {
   const qid = Number(req.params.id);
   const { author, email, text } = req.body;
-
-  // Validate fields (very simple)
   if (!author || !text) {
     return res.status(400).json({ error: 'Please provide your name and answer text.' });
   }
 
-  // Make sure the question exists before adding an answer to it
-  const exists = questions.some(q => q.id === qid);
+    const exists = questions.some(q => q.id === qid);
   if (!exists) {
     return res.status(404).json({ error: 'Question not found.' });
   }
@@ -165,9 +117,8 @@ app.post('/api/questions/:id/answers', (req, res) => {
   res.status(201).json(newAnswer);
 });
 
-// =======================
-// 6) START the server
-// =======================
+
+//start the server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });

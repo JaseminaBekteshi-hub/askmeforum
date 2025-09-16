@@ -1,80 +1,47 @@
-// frontend/src/App.jsx
-// AskMe – Forum (Frontend)
-// - Register OR Login (saved in localStorage)
-// - Only logged-in (registered) users can add questions
-// - Visitors can add answers (name required, email optional)
+//imports api, categories
 
 import { useEffect, useState } from 'react';
 import './App.css';
 
-const FORUM_API = 'http://localhost:5000';
+const askme_API = 'http://localhost:4000';
 const USERS_API = 'http://localhost:5001';
 
-const categoriesForForm = ['Technology', 'Web Development', 'Business', 'General'];
+const categoriesForForm = ['Technology', 'Web Development', 'Business', 'General','Other'];
 const categoriesForFilter = ['All', ...categoriesForForm];
 
+//main function
 function App() {
-  const [questions, setQuestions] = useState([]);
-  const [selected, setSelected] = useState(null);
-  const [answers, setAnswers] = useState([]);
-
-  // auth
-  const [currentUser, setCurrentUser] = useState(null);
-
-  // forms
-  const [registerForm, setRegisterForm] = useState({ name: '', email: '' });
-  const [loginForm, setLoginForm] = useState({ email: '' });
-  const [authMsg, setAuthMsg] = useState('');
-
-  const [questionForm, setQuestionForm] = useState({
-    title: '',
-    description: '',
-    category: 'Technology',
-    tags: '',
-    author: '', // filled from currentUser
-  });
-  const [questionMsg, setQuestionMsg] = useState('');
-
-  const [answerForm, setAnswerForm] = useState({ author: '', email: '', text: '' });
-
-  const [categoryFilter, setCategoryFilter] = useState('All');
-
+  // =================== USE EFFECT (load data,runs once) ===================
   useEffect(() => {
-    // load saved user
-    const saved = localStorage.getItem('askme_user');
+    
+    const saved = localStorage.getItem('logged_user');
     if (saved) {
       const u = JSON.parse(saved);
       setCurrentUser(u);
-      setRegisterForm({ name: u.name, email: u.email });
+      setRegisterForm({ name: u.name,surname:u.surname, email: u.email });
       setQuestionForm(p => ({ ...p, author: u.name }));
     }
+    
     loadQuestions();
-    // eslint-disable-next-line
   }, []);
 
-  const loadQuestions = async () => {
-    try {
-      const res = await fetch(`${FORUM_API}/api/questions`);
-      const data = await res.json();
-      setQuestions(Array.isArray(data) ? data : []);
-    } catch {}
-  };
 
-  const loadAnswers = async (qid) => {
-    try {
-      const res = await fetch(`${FORUM_API}/api/questions/${qid}/answers`);
-      const data = await res.json();
-      setAnswers(Array.isArray(data) ? data : []);
-    } catch {}
-  };
+  // =================== USERS: state ===================
+  const [currentUser, setCurrentUser] = useState(null);
+  const [registerForm, setRegisterForm] = useState({ name: '', surname:'', email: '' });
+  const [loginForm, setLoginForm] = useState({ email: '' });
+  const [authMsg, setAuthMsg] = useState('');
 
-  // --- auth handlers ---
+  // =================== USERS: handlers ===================
   const handleRegisterChange = (e) =>
     setRegisterForm(p => ({ ...p, [e.target.name]: e.target.value }));
+
   const handleLoginChange = (e) =>
     setLoginForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
-  const registerUser = async (e) => {
+  // =================== USERS: actions ===================
+
+    const registerUser = async (e) => {
     e.preventDefault();
     setAuthMsg('');
     try {
@@ -85,8 +52,8 @@ function App() {
       });
       const data = await res.json();
       if (!res.ok) return setAuthMsg(data?.error || 'Registration failed');
-      localStorage.setItem('askme_user', JSON.stringify({ name: data.name, email: data.email }));
-      setCurrentUser({ name: data.name, email: data.email });
+      localStorage.setItem('logged_user', JSON.stringify({ name: data.name, surname: data.surname, email: data.email }));
+      setCurrentUser({ name: data.name, surname: data.surname, email: data.email });
       setQuestionForm(p => ({ ...p, author: data.name }));
       setAuthMsg(`Registered: ${data.name} (${data.email}) ✅`);
     } catch {
@@ -105,8 +72,8 @@ function App() {
       });
       const data = await res.json();
       if (!res.ok) return setAuthMsg(data?.error || 'Login failed');
-      localStorage.setItem('askme_user', JSON.stringify({ name: data.name, email: data.email }));
-      setCurrentUser({ name: data.name, email: data.email });
+      localStorage.setItem('logged_user', JSON.stringify({ name: data.name, email: data.email, surname: data.surname}));
+      setCurrentUser({ name: data.name,surname:data.surname, email: data.email, });
       setQuestionForm(p => ({ ...p, author: data.name }));
       setAuthMsg(`Logged in as: ${data.name} ✅`);
     } catch {
@@ -115,7 +82,7 @@ function App() {
   };
 
   const logout = () => {
-    localStorage.removeItem('askme_user');
+    localStorage.removeItem('logged_user');
     setCurrentUser(null);
     setRegisterForm({ name: '', email: '' });
     setLoginForm({ email: '' });
@@ -123,12 +90,35 @@ function App() {
     setAuthMsg('Logged out.');
   };
 
-  // --- forum handlers ---
+
+  // =================== QUESTIONS: state ===================
+
+  const [questions, setQuestions] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [questionForm, setQuestionForm] = useState({
+    title: '',
+    description: '',
+    category: 'General',
+    tags: '',
+    author: '', // filled from currentUser
+  });
+  const [questionMsg, setQuestionMsg] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+
+  // =================== QUESTIONS: fetch ===================
+  const loadQuestions = async () => {
+    try {
+      const res = await fetch(`${askme_API}/api/questions`);
+      const data = await res.json();
+      setQuestions(Array.isArray(data) ? data : []);
+    } catch {}
+  };
+
+  // =================== QUESTIONS: handlers ===================
   const handleQuestionChange = (e) =>
     setQuestionForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
-  const handleAnswerChange = (e) =>
-    setAnswerForm(p => ({ ...p, [e.target.name]: e.target.value }));
+  // =================== QUESTIONS: actions ===================
 
   const submitQuestion = async (e) => {
     e.preventDefault();
@@ -138,12 +128,12 @@ function App() {
       return;
     }
     try {
-      const res = await fetch(`${FORUM_API}/api/questions`, {
+      const res = await fetch(`${askme_API}/api/questions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...questionForm,
-          author: currentUser.name, // enforce current user
+          author: currentUser.name, 
         }),
       });
       const data = await res.json();
@@ -153,33 +143,52 @@ function App() {
       setQuestionForm({
         title: '',
         description: '',
-        category: 'Technology',
+        category: 'General',
         tags: '',
         author: currentUser.name,
       });
       await loadQuestions();
     } catch {
-      setQuestionMsg('Could not reach Forum service (5000).');
+      setQuestionMsg('Could not reach Forum service (4000).');
     }
   };
 
   const openQuestion = async (id) => {
     try {
-      const res = await fetch(`${FORUM_API}/api/questions/${id}`);
+      const res = await fetch(`${askme_API}/api/questions/${id}`);
       if (!res.ok) return;
       const q = await res.json();
       setSelected(q);
-      await loadQuestions();
-      await loadAnswers(id);
+      await loadQuestions();    
+      await loadAnswers(id);     
       setAnswerForm({ author: '', email: '', text: '' });
     } catch {}
   };
 
+
+  // =================== ANSWERS: state ===================
+  const [answers, setAnswers] = useState([]);
+  const [answerForm, setAnswerForm] = useState({ author: '', email: '', text: '' });
+
+  // =================== ANSWERS: fetch ===================
+  const loadAnswers = async (qid) => {
+    try {
+      const res = await fetch(`${askme_API}/api/questions/${qid}/answers`);
+      const data = await res.json();
+      setAnswers(Array.isArray(data) ? data : []);
+    } catch {}
+  };
+
+  // =================== ANSWERS: handlers ===================
+  const handleAnswerChange = (e) =>
+    setAnswerForm(p => ({ ...p, [e.target.name]: e.target.value }));
+
+  // =================== ANSWERS: actions ===================
   const submitAnswer = async (e) => {
     e.preventDefault();
     if (!selected) return;
     try {
-      const res = await fetch(`${FORUM_API}/api/questions/${selected.id}/answers`, {
+      const res = await fetch(`${askme_API}/api/questions/${selected.id}/answers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(answerForm),
@@ -189,14 +198,18 @@ function App() {
       await loadAnswers(selected.id);
       setAnswerForm({ author: '', email: '', text: '' });
     } catch {
-      alert('Could not reach Forum service (5000).');
+      alert('Could not reach Forum service (4000).');
     }
   };
 
   const backToList = () => { setSelected(null); setAnswers([]); };
 
+  // =================== PRE-RENDER HELPERS ===================
   const filteredQuestions =
     categoryFilter === 'All' ? questions : questions.filter(q => q.category === categoryFilter);
+
+  //
+
 
   return (
     <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
@@ -206,16 +219,16 @@ function App() {
           <h1>AskMe – Forum</h1>
           <p className="tagline">
             A collaborative space for technical discussions.<br />
-           Registered users can post questions, and visitors are welcome to share their answers.
+            Registered users can post questions, and visitors are welcome to share their answers.
           </p>
         </header>
 
-        {/* Auth status */}
+        {/* User logged or not */}
         <section className="card" style={{ marginBottom: 20 }}>
           {currentUser ? (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                Logged in as <strong>{currentUser.name}</strong> ({currentUser.email})
+                Logged in as <strong>{currentUser.name} {currentUser.surname}</strong> ({currentUser.email})
               </div>
               <button className="btn" onClick={logout}>Logout</button>
             </div>
@@ -224,7 +237,7 @@ function App() {
           )}
         </section>
 
-        {/* Auth forms */}
+        {/* User forms */}
         {!currentUser && (
           <section className="card">
             <div style={{ display: 'grid', gap: 20 }}>
@@ -235,6 +248,9 @@ function App() {
                   <label className="label">Your name</label>
                   <input className="input" name="name" value={registerForm.name} onChange={handleRegisterChange} />
                   <div style={{ height: 10 }} />
+                  <label className="label">Your surname</label>
+                   <input className="input" name="surname" value={registerForm.surname} onChange={handleRegisterChange} />
+<div style={{ height: 10 }} />
                   <label className="label">Your email</label>
                   <input className="input" name="email" value={registerForm.email} onChange={handleRegisterChange} />
                   <div style={{ height: 12 }} />
@@ -260,7 +276,7 @@ function App() {
           </section>
         )}
 
-        {/* Details view */}
+        {/* Opened question view */}
         {selected ? (
           <section className="card">
             <button onClick={backToList} className="btn" style={{ marginBottom: 12 }}>← Back</button>
@@ -268,10 +284,11 @@ function App() {
             <p>{selected.description}</p>
             <p className="small">
               Category: {selected.category} | Author: {selected.author} | Views: {selected.views}
-              {selected.tags?.length ? <> | Tags: {selected.tags.join(', ')}</> : null}
+              {selected.tags?.length ? <> | Tags: {Array.isArray(selected.tags) ? selected.tags.join(', ') : selected.tags}</> : null}
             </p>
 
             <hr className="divider" />
+           {/* Answers*/}
             <h3 className="section-title" style={{ marginTop: 0 }}>Answers</h3>
             {answers.length === 0 ? (
               <p className="small">No answers yet. Be the first to answer!</p>
@@ -285,6 +302,7 @@ function App() {
             )}
 
             <hr className="divider" />
+            {/* Add your answer*/}
             <h3 className="section-title">Add your answer</h3>
             <form onSubmit={submitAnswer}>
               <label className="label">Your name</label>
@@ -323,12 +341,15 @@ function App() {
                 <input className="input" name="tags" value={questionForm.tags} onChange={handleQuestionChange} placeholder="react, javascript" />
                 <div style={{ height: 10 }} />
                 <label className="label">Author</label>
+
+
                 <input className="input" name="author" value={questionForm.author} onChange={handleQuestionChange} readOnly placeholder="Login to fill" />
                 <div style={{ height: 12 }} />
                 <button type="submit" className="btn" disabled={!currentUser}>Post Question</button>
               </form>
               {questionMsg && <p className="small" style={{ marginTop: 12 }}>{questionMsg}</p>}
             </section>
+
 
             {/* Questions list */}
             <section className="card" style={{ paddingBottom: 10 }}>
@@ -347,7 +368,7 @@ function App() {
                     <p className="small" style={{ marginTop: -2, marginBottom: 8 }}>{q.description}</p>
                     <div className="q-meta">
                       Category: {q.category} | Author: {q.author} | Views: {q.views}
-                      {q.tags?.length ? <> | Tags: {q.tags.join(', ')}</> : null}
+                      {q.tags?.length ? <> | Tags: {Array.isArray(q.tags) ? q.tags.join(', ') : q.tags}</> : null}
                     </div>
                     <div className="q-open">
                       <button className="btn" onClick={() => openQuestion(q.id)}>Open</button>
